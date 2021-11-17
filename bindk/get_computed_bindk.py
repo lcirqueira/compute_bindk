@@ -11,14 +11,17 @@ BETA = 1/RT
 
 STDCONC = 1/1660
 
+
 CONC = folddefs.FOLDER_CONC
 
-BINDWORK = cdef.BINDWORK
+BINDWORK = cdef.CONC_BINDWORK
 
 DENS_SCALE = cdef.DENS_SCALE
 REF_CONC = cdef.REF_CONC
 
 LIGNUM = cdef.LIGNUM
+
+LIPNUM = cdef.LIPNUM
 
 SITES = cdef.SITES    
 PATHDIC = cdef.FLD_PATH
@@ -26,20 +29,17 @@ PATHDIC = cdef.FLD_PATH
 conc_arr = cdef.CONCLIST
 
 
-def get_Kn(dens , n):
+def get_Kn(dens , dwp_alpha , res_unsolv , bindwork , n):
     narr = np.arange(n + 1)
-    dwp_alpha = alphadic[dens]
-    res_unsolv = unsolvdic[dens] 
 
     stepKn = np.ones(narr.shape[0])
-    stepKn[1:] = (volume / narr[1:]) * np.exp(-BETA * (dwp_alpha + res_unsolv - meanbindw) )
+    stepKn[1:] = (volume / narr[1:]) * np.exp(-BETA * (dwp_alpha + res_unsolv[1:] - bindwork) )
 
     Kn = stepKn.astype("longdouble").cumprod()
     return(stepKn , Kn)
 
 
-def get_dG(dens , n):
-    stepKn , Kn = get_Kn(dens , n)
+def get_dG(dens , stepKn , n):
     narr = np.arange(n + 1)
 
     stepdG = np.zeros_like(stepKn)
@@ -49,42 +49,59 @@ def get_dG(dens , n):
     return(stepdG , dG)
 
 
+def get_unsolv_work(h_0 , W_0 , n , nmax):
+    frac = (nmax - n) / ((nmax - n ) + LIPNUM)
+    unsolv_work = W_0 - h_0 + (h_0 * np.square(1 - frac))
+
+    return(unsolv_work)
+
+
 
 volume = np.loadtxt("{}/MSMS_wtreptow_volume.dat".format(cdef.MSMS_SURF_PATH))
 
 #bindwdata = np.loadtxt("{}/avg_stepbindw.dat".format(cdef.BINDW_PATH))
 #meanbindw = bindwdata[0]
-meanbindw = BINDWORK
 
 
-unsolv_dG = np.loadtxt("{}/analysis/partition_coefficient/fep_energies.dat".format(cdef.MEMB_PATH))
-unsolvdic = {data[0] : data[1] for data in unsolv_dG}
+unsolv_dG_par = np.loadtxt("{}/analysis/partition_coefficient/inv-datafit-partition.dat".format(cdef.MEMB_PATH))
+h0 , W0 = -unsolv_dG_par[0] , unsolv_dG_par[3]
 
 
 dwp_alpha = np.loadtxt("{}/allconc_alpha.dat".format(cdef.DWP_PATH))
 alphadic = {data[0] : data[1] for data in dwp_alpha}
 
-for conc in conc_arr:
+for i , conc in enumerate(conc_arr):
     if not os.path.exists("{:.2f}mM".format(conc)):
         os.mkdir("{:.2f}mM".format(conc))
 
-    stepbindk , bindk = get_Kn(conc , LIGNUM[conc])
+    conc_lignum = LIGNUM[conc]
+    narr = np.arange(conc_lignum + 1)
+
+    bindw = BINDWORK[i]
+
+    conc_dwp_alpha = alphadic[conc]
+
+    unsolv_work = get_unsolv_work(h0 , W0 , narr , conc_lignum)
+
+    stepbindk , bindk = get_Kn(conc , conc_dwp_alpha , unsolv_work , bindw , conc_lignum)
     np.savetxt("{0:.2f}mM/stepbindk.{0:.2f}mM.dat".format(conc) , stepbindk)
     np.savetxt("{0:.2f}mM/bindk.{0:.2f}mM.dat".format(conc) , bindk)
     np.save("{0:.2f}mM/bindk.{0:.2f}mM".format(conc) , bindk)
 
-    stepdeltaG , deltaG = get_dG(conc , LIGNUM[conc])
+
+    stepdeltaG , deltaG = get_dG(conc , stepbindk , conc_lignum)
     np.savetxt("{0:.2f}mM/stepdeltaG.{0:.2f}mM.dat".format(conc) , stepdeltaG)
     np.savetxt("{0:.2f}mM/deltaG.{0:.2f}mM.dat".format(conc) , deltaG)
 
 
 with open("compute_params.dat" , "w") as fout:
     fout.write("""Compute bindk parameters:
-W** = {:.3f} kcal/mol
+W** = {} kcal/mol
 
 Volume = {} A^3
 
-W* = {}
+h0 = {} kcal/mol
+W*(x=0) = {} kcal/mol
 
 alpha = {}
-""".format(BINDWORK , volume , unsolvdic , alphadic))
+""".format(BINDWORK , volume , h0 , W0 , alphadic))
