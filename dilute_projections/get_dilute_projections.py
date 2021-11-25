@@ -14,6 +14,9 @@ CONC = folddefs.FOLDER_CONC
 DENS_SCALE = cdef.DENS_SCALE
 REF_CONC = cdef.REF_CONC
 
+DIL_REF = cdef.DIL_REF
+DIL_END = cdef.DIL_END
+
 LIGNUM = cdef.LIGNUM
 SYS_VOL = cdef.SYS_VOL
 
@@ -22,17 +25,20 @@ COMP_PATH = cdef.COMPUTE_PATH
 SITES = cdef.SITES    
 PATHDIC = cdef.FLD_PATH
 
-conc_arr = cdef.CONCLIST
+
+conc_arr = np.arange(1 , DIL_END + 1 , 1)
+
+bindk = np.load("{0}/bindk/{1:.2f}mM/bindk.{1:.2f}mM.npy".format(COMP_PATH , DIL_REF))
+#bindk = np.loadtxt("{0}/bindk/{1:.2f}mM/bindk.{1:.2f}mM.dat".format(COMP_PATH , conc))
 
 
 mean_n = []
 
+
 for conc in conc_arr:
+    conclignum = np.ceil( (LIGNUM[REF_CONC] / REF_CONC) * conc)
 
-    densityUV = LIGNUM[conc] / (SYS_VOL / 100000)
-
-    #bindk = np.loadtxt("{0}/bindk/{1:.2f}mM/bindk.{1:.2f}mM.dat".format(COMP_PATH , conc))
-    bindk = np.load("{0}/bindk/{1:.2f}mM/bindk.{1:.2f}mM.npy".format(COMP_PATH , conc))
+    densityUV = conclignum / (SYS_VOL / 100000)
 
     occnum = bindk.shape[0]
 
@@ -40,7 +46,6 @@ for conc in conc_arr:
     probs[:,0] = np.arange(occnum)
 
     for num in range(occnum):
-        #probs[num,1] = (densitya3 ** num) * bindk[num]
         probs[num,1] = (densityUV ** num) * bindk[num]
 
     probs[:,1] /= probs[:,1].sum()
@@ -54,4 +59,4 @@ for conc in conc_arr:
 meanout = np.zeros((len(conc_arr) , 2))
 meanout[:,0] = conc_arr
 meanout[:,1] = mean_n
-np.savetxt("mean_n_allconc.dat" , meanout , header="Concentration (mM)  <n>" , fmt="%.0f %.4f")
+np.savetxt("mean_n_allconc.dat" , meanout , header="Concentration (mM)  <n>" , fmt="%.1f %.4f")

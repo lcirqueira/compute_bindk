@@ -4,19 +4,22 @@ REF_CONC = 150 #mM
 #CONC_ARR = range(1 , 151 , 0.1)
 
 BINDWORK = 4.57
+CONC_BINDWORK = [5.02 , 5.02 , 5.00 , 4.9 , 4.8 , 4.64]
 
-#LIGNUM = {150 : 174,
-          #100 : 116,
-           #75 : 87,
-           #50 : 58,
-           #25 : 29,
-           #1  : 2} 
-LIGNUM = {150 : 72,
-          100 : 72,
-           75 : 72,
-           50 : 72,
-           25 : 72,
-           1  : 72}
+NET_WORK = -0.77
+
+LIGNUM = {150 : 174,
+          100 : 116,
+           75 : 87,
+           50 : 58,
+           25 : 29,
+           1  : 2} 
+#LIGNUM = {150 : 72,
+          #100 : 72,
+           #75 : 72,
+           #50 : 72,
+           #25 : 72,
+           #1  : 72}
 
 
 FLD_PATH = {150 : "/home/lcirqueira/Simulations/ionchannel/kv1/kv1.12/flooding/sevoflurane",
